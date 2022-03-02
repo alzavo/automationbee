@@ -53,7 +53,11 @@ public class ScorecardGroup {
         this.active = active;
     }
 
-    public int getActive() {
+    public ScorecardVariable getActive() {
+        return values.get(active);
+    }
+    
+    public int getActiveIndex() {
         return active;
     }
 

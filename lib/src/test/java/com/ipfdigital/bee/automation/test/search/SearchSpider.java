@@ -1,6 +1,9 @@
 package com.ipfdigital.bee.automation.test.search;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import com.ipfdigital.bee.automation.test.global.generator.Scorecard;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardGroup;
@@ -8,15 +11,7 @@ import com.ipfdigital.bee.automation.test.global.generator.ScorecardVariable;
 import com.ipfdigital.bee.automation.test.mx.engine.Field;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardDictionary;
 
-// check for all available scores
-// choose the biggest suitable
-// target - choice = target
-// repeat 
-// save story in cash, if fail to find, go back, and choose another path
-
-// START WRITING CODE FROM THE BEGINNING 
-
-// new comment for token testing
+// step, think about step
 
 public class SearchSpider {
 	private ArrayList<ScorecardGroup> scorecardGroups = new ArrayList<>();
@@ -30,27 +25,28 @@ public class SearchSpider {
 	
 
 	public Scorecard findTarget(int target) {
+		// THINK ABOUT LOGIC OF SEARCH || WHAT EXACTLY DO WE NEED TO FIND
 		target = target - dictionaryConstant;
-		int searchTarget = target;
+		int searchTarget = getCurrentScore() - target;
 		int stepCounter = 0;
-		int currentScore = 0;
+		
+		System.out.println("searchTarget: " + searchTarget);
 		
 		boolean doSearch = true;
 		while (doSearch) {
 			stepCounter++;
 			
-			System.out.println("search target: " + searchTarget);
+			System.out.println("current score: " + getCurrentScore());
 			
-			currentScore = findBiggestSuitable(searchTarget);
-			searchTarget -= currentScore;
+			HashMap<Field, ScorecardVariable> suitableVars = getSuitableVars(searchTarget);
+			HashMap<Field, ScorecardVariable> theBiggestSuitable = getTheBiggestSuitable(suitableVars);
+			setActiveVariable(theBiggestSuitable);
 			
-			if (searchTarget == 0) {
-				System.out.println("FOUND!");
-				System.out.println(getCurrentScore());
-				break;
-			}
-
-			if (stepCounter == 100) { 
+			System.out.println(theBiggestSuitable);
+			System.out.println("current score: " + getCurrentScore());
+			
+			
+			if (stepCounter == 1) {
 				doSearch = false;
 			}
 			
@@ -59,63 +55,58 @@ public class SearchSpider {
 		return null;
 	}
 	
-	private int findBiggestSuitable(int target) {
-		Field suitableGroupName = null;
-		int indexOfScore = 0;
-		Integer biggestScore = null;
+	private HashMap<Field, ScorecardVariable> getSuitableVars(int searchTarget) {
+		HashMap<Field, ScorecardVariable> suitableVars = new HashMap<>();
 		
 		for (ScorecardGroup scorecardGroup : scorecardGroups) {
-			
-			if (scorecardGroup.isTheBiggestScore() || usedFields.contains(scorecardGroup.getName())) {
-				continue;
-			}
-			
-			System.out.println(scorecardGroup.getName());
-			
-			int index = 1;
-			while (scorecardGroup.getSize() - index >= 0) {
-				ScorecardVariable variable = scorecardGroup.getValues().get(scorecardGroup.getSize() - index);
+			for (int i = scorecardGroup.getValues().size() - 1; i > -1; i--) {
+				ScorecardVariable currentVariable = scorecardGroup.getValues().get(i);
 				
-				if (biggestScore == null) {
-					biggestScore = variable.getScore();
+				int step = currentVariable.getScore() - scorecardGroup.getActive().getScore();
+				
+				if (step == 24) {
+					System.out.println(scorecardGroup);
 				}
-				
-//				System.out.println(variable.getScore() <= target && variable.getScore() >= score);
-				
-				if (variable.getScore() <= target && variable.getScore() >= biggestScore) {
-					suitableGroupName = scorecardGroup.getName();
-					usedFields.add(suitableGroupName);
-					biggestScore = variable.getScore();
-					indexOfScore = scorecardGroup.getValues().lastIndexOf(variable);
-//					System.out.println(suitableGroupName);
-//					System.out.println(score);
+
+				if (step <= searchTarget) {
+					suitableVars.put(scorecardGroup.getName(), currentVariable);
 					break;
 				}
-				
-				index++;
 			}
 		}
 		
-		if (suitableGroupName == null) {
-			System.out.println("///////////////////////");
-			System.out.println(usedFields);
-			System.out.println(usedFields.size());
-			System.out.println(suitableGroupName);
-			System.out.println(biggestScore);
-			throw new IllegalStateException();
-		}
-		
-		
-		for (ScorecardGroup scorecardGroup : scorecardGroups) {
-			if (scorecardGroup.getName().equals(suitableGroupName)) {
-				scorecardGroup.setActive(indexOfScore);
-			}
-		}
-		
-		return biggestScore;
+		return suitableVars;
 	}
 	
+	private HashMap<Field, ScorecardVariable> getTheBiggestSuitable(HashMap<Field, ScorecardVariable> suitableVars) {
+		Field field = suitableVars.keySet().iterator().next();
+		ScorecardVariable variable = suitableVars.values().iterator().next();
+		
+		for (Entry<Field, ScorecardVariable> entry : suitableVars.entrySet()) {
+			if (entry.getValue().getScore() > variable.getScore()) {
+				variable = entry.getValue();
+				field = entry.getKey();
+			}
+		}
+		
+		HashMap<Field, ScorecardVariable> result = new HashMap<>();
+		result.put(field, variable);
+		
+		return result;
+	}
 	
+	private void setActiveVariable(HashMap<Field, ScorecardVariable> theBiggestSuitable) {
+		Field field = theBiggestSuitable.keySet().iterator().next();
+		ScorecardVariable variable = theBiggestSuitable.values().iterator().next();
+		
+		for (ScorecardGroup scorecardGroup : scorecardGroups) {
+			if (scorecardGroup.getName().equals(field)) {
+				int index = scorecardGroup.getValues().indexOf(variable);
+				scorecardGroup.setActive(index);
+				break;
+			}
+		}
+	}
 	
 	private int getCurrentScore() {
 		int result = 0;

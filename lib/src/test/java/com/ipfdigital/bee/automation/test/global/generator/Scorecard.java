@@ -43,7 +43,7 @@ public class Scorecard {
 
 	  public Scorecard copy() {
 	    Scorecard copy = new Scorecard(dictionary);
-	    copy.setStatus(scorecard.stream().collect(Collectors.toMap(ScorecardGroup::getName, ScorecardGroup::getActive)));
+	    copy.setStatus(scorecard.stream().collect(Collectors.toMap(ScorecardGroup::getName, ScorecardGroup::getActiveIndex)));
 	    return copy;
 	  }
 
