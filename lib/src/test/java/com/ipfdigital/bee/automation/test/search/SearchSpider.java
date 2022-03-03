@@ -1,22 +1,19 @@
 package com.ipfdigital.bee.automation.test.search;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map.Entry;
+import java.util.Stack;
 
 import com.ipfdigital.bee.automation.test.global.generator.Scorecard;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardGroup;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardVariable;
-import com.ipfdigital.bee.automation.test.mx.engine.Field;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardDictionary;
-
-// step, think about step
 
 public class SearchSpider {
 	private ArrayList<ScorecardGroup> scorecardGroups = new ArrayList<>();
 	private int dictionaryConstant = -1;
-	private ArrayList<Field> usedFields = new ArrayList<>();
+	private Stack<ActionUnit> history = new Stack<>();
 	
 	public SearchSpider(ScorecardDictionary dictionary) {
 		this.dictionaryConstant = dictionary.getConstant();
@@ -24,89 +21,100 @@ public class SearchSpider {
 	}
 	
 
-	public Scorecard findTarget(int target) {
-		// THINK ABOUT LOGIC OF SEARCH || WHAT EXACTLY DO WE NEED TO FIND
+	public boolean findTarget(int target) {
+		System.out.println("target: " + target);
 		target = target - dictionaryConstant;
-		int searchTarget = getCurrentScore() - target;
 		int stepCounter = 0;
 		
-		System.out.println("searchTarget: " + searchTarget);
+		System.out.println("target: " + target);
 		
-		boolean doSearch = true;
-		while (doSearch) {
+		while (true) {
 			stepCounter++;
 			
-			System.out.println("current score: " + getCurrentScore());
-			
-			HashMap<Field, ScorecardVariable> suitableVars = getSuitableVars(searchTarget);
-			HashMap<Field, ScorecardVariable> theBiggestSuitable = getTheBiggestSuitable(suitableVars);
-			setActiveVariable(theBiggestSuitable);
-			
-			System.out.println(theBiggestSuitable);
-			System.out.println("current score: " + getCurrentScore());
-			
-			
-			if (stepCounter == 1) {
-				doSearch = false;
+			if (getCurrentScore() == target) {
+				return true;
 			}
 			
+			System.out.println(getCurrentScore());
+			setBiggestSuitable(target);
+			System.out.println(getCurrentScore());
+			
+//			setBiggestSuitable(target);
+			
+			
+			if (stepCounter == 20) {
+				System.out.println(history);
+				return false;
+			}
 		}
-	
-		return null;
 	}
 	
-	private HashMap<Field, ScorecardVariable> getSuitableVars(int searchTarget) {
-		HashMap<Field, ScorecardVariable> suitableVars = new HashMap<>();
-		
-		for (ScorecardGroup scorecardGroup : scorecardGroups) {
-			for (int i = scorecardGroup.getValues().size() - 1; i > -1; i--) {
-				ScorecardVariable currentVariable = scorecardGroup.getValues().get(i);
-				
-				int step = currentVariable.getScore() - scorecardGroup.getActive().getScore();
-				
-				if (step == 24) {
-					System.out.println(scorecardGroup);
-				}
 
-				if (step <= searchTarget) {
-					suitableVars.put(scorecardGroup.getName(), currentVariable);
-					break;
-				}
-			}
-		}
-		
-		return suitableVars;
-	}
-	
-	private HashMap<Field, ScorecardVariable> getTheBiggestSuitable(HashMap<Field, ScorecardVariable> suitableVars) {
-		Field field = suitableVars.keySet().iterator().next();
-		ScorecardVariable variable = suitableVars.values().iterator().next();
-		
-		for (Entry<Field, ScorecardVariable> entry : suitableVars.entrySet()) {
-			if (entry.getValue().getScore() > variable.getScore()) {
-				variable = entry.getValue();
-				field = entry.getKey();
-			}
-		}
-		
-		HashMap<Field, ScorecardVariable> result = new HashMap<>();
-		result.put(field, variable);
-		
-		return result;
-	}
-	
-	private void setActiveVariable(HashMap<Field, ScorecardVariable> theBiggestSuitable) {
-		Field field = theBiggestSuitable.keySet().iterator().next();
-		ScorecardVariable variable = theBiggestSuitable.values().iterator().next();
+	private void setBiggestSuitable(int target) {
+		ArrayList<ActionUnit> suitables = new ArrayList<>();
 		
 		for (ScorecardGroup scorecardGroup : scorecardGroups) {
-			if (scorecardGroup.getName().equals(field)) {
-				int index = scorecardGroup.getValues().indexOf(variable);
-				scorecardGroup.setActive(index);
+			for (int i = scorecardGroup.getSize() - 1; i > -1; i--) {
+				ScorecardVariable variable = scorecardGroup.getValues().get(i);
+				int activeScore = scorecardGroup.getActive().getScore();
+				int currentScore = variable.getScore();
+				int step = currentScore - activeScore;
+				
+				// both negative
+				if (getCurrentScore() < 0 && target < 0) {
+					if (step <= Math.abs(Math.abs(target) - Math.abs(getCurrentScore()))) {
+						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
+						break;
+					}
+				}
+				
+				// current negative, target positive
+				if (getCurrentScore() <= 0 && target >= 0) {
+					if (step <= target + Math.abs(getCurrentScore())) {
+						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
+						break;
+					}
+				}
+			
+				// current positive, target negative
+				if (getCurrentScore() > 0 && target < 0) {
+					throw new IllegalStateException();
+				}
+				
+				// both positive
+				if (getCurrentScore() > 0 && target > 0) {
+					if (step <= target - getCurrentScore()) {
+						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
+						break;
+					}
+				}
+				
+			}
+		}
+		
+		// if sum of steps in suitables is 0, then choose another thing
+		int check = suitables.stream().mapToInt(ActionUnit::getStep).sum();
+		// create history where will be hold first action unit of current search
+		// then fail => add first action unit and start new search from other variable
+		// also can see how much difference between current search and target, then check for this step among groups
+		
+		Collections.sort(suitables, Comparator.comparing(ActionUnit::getStep));
+		
+		setActive(suitables.get(suitables.size() - 1));
+		
+		System.out.println(suitables);
+	}
+	
+	private void setActive(ActionUnit unit) {
+		for (ScorecardGroup scorecardGroup : scorecardGroups) {
+			if (scorecardGroup.getName().equals(unit.getGroupName())) {
+				scorecardGroup.setActive(unit.getBecomeIndex());
+				history.add(unit);
 				break;
 			}
 		}
 	}
+
 	
 	private int getCurrentScore() {
 		int result = 0;

@@ -12,33 +12,50 @@ public class MainTest {
 	void appConcreteTargetTest() {		
 		SearchSpider searchSpider = new SearchSpider(new AppScorecardDictionaryMX());
 		int score = (int) Math.round(Math.random() * (293 - 98) + 98);
-		System.out.println("target: " + score);
-		searchSpider.findTarget(score);
+		score = 291;
+		boolean result = searchSpider.findTarget(score);
+		if (result) {
+			System.out.println("FOUND: " + score);
+		} else {
+			System.out.println("NOT: " + score);
+		}
 	}
 	
 	@Test
 	void appFromMinToMaxTest() {
-		SearchSpider searchSpider = new SearchSpider(new AppScorecardDictionaryMX());
 		for (int i = 98; i <= 293; i++) {
-			System.out.println("target: " + i);
-			searchSpider.findTarget(i);
+			SearchSpider searchSpider = new SearchSpider(new AppScorecardDictionaryMX());
+			boolean result = searchSpider.findTarget(i);
+			if (result) {
+				System.out.println("FOUND: " + i);
+			} else {
+				System.out.println("NOT: " + i);
+			}
 		}
 	}
 	
 	@Test
 	void behConcreteTargetTest() {		
-		SearchSpider searchSpider = new SearchSpider(new AppScorecardDictionaryMX());
+		SearchSpider searchSpider = new SearchSpider(new BehScorecardDictionaryMX());
 		int score = (int) Math.round(Math.random() * (348 - 119) + 119);
-		System.out.println("target: " + score);
-		searchSpider.findTarget(score);
+		boolean result = searchSpider.findTarget(score);
+		if (result) {
+			System.out.println("FOUND: " + score);
+		} else {
+			System.out.println("NOT: " + score);
+		}
 	}
 	
 	@Test
 	void behFromMinToMaxTest() {
-		SearchSpider searchSpider = new SearchSpider(new BehScorecardDictionaryMX());
 		for (int i = 119; i <= 348; i++) {
-			System.out.println("target: " + i);
-			searchSpider.findTarget(i);
+			SearchSpider searchSpider = new SearchSpider(new BehScorecardDictionaryMX());
+			boolean result = searchSpider.findTarget(i);
+			if (result) {
+				System.out.println("FOUND: " + i);
+			} else {
+				System.out.println("NOT: " + i);
+			}
 		}
 	}
 }
