@@ -3,17 +3,20 @@ package com.ipfdigital.bee.automation.test.search;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Stack;
 
 import com.ipfdigital.bee.automation.test.global.generator.Scorecard;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardGroup;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardVariable;
+import com.ipfdigital.bee.automation.test.mx.engine.Field;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardDictionary;
 
 public class SearchSpider {
 	private ArrayList<ScorecardGroup> scorecardGroups = new ArrayList<>();
 	private int dictionaryConstant = -1;
 	private Stack<ActionUnit> history = new Stack<>();
+	private ArrayList<Field> failHistory = new ArrayList<>();
 	
 	public SearchSpider(ScorecardDictionary dictionary) {
 		this.dictionaryConstant = dictionary.getConstant();
@@ -22,11 +25,13 @@ public class SearchSpider {
 	
 
 	public boolean findTarget(int target) {
-		System.out.println("target: " + target);
+//		System.out.println("target: " + target);
 		target = target - dictionaryConstant;
+		int allVariablesCount = scorecardGroups.stream().mapToInt(group -> group.getValues().size()).sum();
+		int allGroupsCount = scorecardGroups.stream().mapToInt(group -> 1).sum();
 		int stepCounter = 0;
 		
-		System.out.println("target: " + target);
+//		System.out.println("target: " + target);
 		
 		while (true) {
 			stepCounter++;
@@ -35,15 +40,16 @@ public class SearchSpider {
 				return true;
 			}
 			
-			System.out.println(getCurrentScore());
-			setBiggestSuitable(target);
-			System.out.println(getCurrentScore());
-			
+//			System.out.println(getCurrentScore());
 //			setBiggestSuitable(target);
+//			System.out.println(getCurrentScore());
+			
+			setBiggestSuitable(target);
 			
 			
-			if (stepCounter == 20) {
+			if (stepCounter == allVariablesCount * allGroupsCount) {
 				System.out.println(history);
+				System.out.println(failHistory);
 				return false;
 			}
 		}
@@ -92,17 +98,51 @@ public class SearchSpider {
 			}
 		}
 		
-		// if sum of steps in suitables is 0, then choose another thing
-		int check = suitables.stream().mapToInt(ActionUnit::getStep).sum();
-		// create history where will be hold first action unit of current search
-		// then fail => add first action unit and start new search from other variable
-		// also can see how much difference between current search and target, then check for this step among groups
+		if (suitables.stream().mapToInt(ActionUnit::getStep).sum() == 0) {
+			ActionUnit historyStart = history.get(0);
+			
+			// clear all
+			history.clear();
+			for (ScorecardGroup scorecardGroup : scorecardGroups) {
+				scorecardGroup.setActive(0);
+			}
+			
+			// entire group variables fails
+			if (historyStart.getBecomeIndex() == 0) {
+				failHistory.add(historyStart.getGroupName());
+				return;
+			}
+			
+			scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().setActive(historyStart.getWasIndex());
+			Integer wasScore = scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().getScore();
+			
+			scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().setActive(historyStart.getBecomeIndex() - 1);
+			Integer becomeScore = scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().getScore();
+			
+			historyStart.setStep(becomeScore - wasScore);
+			historyStart.setBecomeIndex(historyStart.getBecomeIndex() - 1);
+			
+			suitables.clear();
+			suitables.add(historyStart);
+			history.add(historyStart);
+		}
+		
 		
 		Collections.sort(suitables, Comparator.comparing(ActionUnit::getStep));
 		
+		if (history.size() == 0 && failHistory.size() != 0) {
+//			System.out.println(suitables);
+			int difference = suitables.size() - failHistory.size();
+			for (int i = 0; i < difference; i++) {
+				suitables.remove(suitables.size() - 1);
+			}
+//			System.out.println(suitables);
+//			System.out.println("/////////////////////////////");
+		} 
+		
 		setActive(suitables.get(suitables.size() - 1));
 		
-		System.out.println(suitables);
+		//System.out.println(suitables);
 	}
 	
 	private void setActive(ActionUnit unit) {

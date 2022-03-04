@@ -20,16 +20,32 @@ public class ActionUnit {
 		return groupName;
 	}
 	
+	public Field setGroupName(Field groupName) {
+		return this.groupName = groupName;
+	}
+	
 	public int getWasIndex() {
 		return wasIndex;
+	}
+	
+	public void setWasIndex(int wasIndex) {
+		this.wasIndex = wasIndex;
 	}
 	
 	public int getBecomeIndex() {
 		return becomeIndex;
 	}
 	
+	public void setBecomeIndex(int becomeIndex) {
+		this.becomeIndex = becomeIndex;
+	}
+	
 	public int getStep() {
 		return step;
+	}
+	
+	public void setStep(int step) {
+		this.step = step;
 	}
 	
 	@Override

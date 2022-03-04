@@ -12,7 +12,7 @@ public class MainTest {
 	void appConcreteTargetTest() {		
 		SearchSpider searchSpider = new SearchSpider(new AppScorecardDictionaryMX());
 		int score = (int) Math.round(Math.random() * (293 - 98) + 98);
-		score = 291;
+		score = 289;
 		boolean result = searchSpider.findTarget(score);
 		if (result) {
 			System.out.println("FOUND: " + score);
