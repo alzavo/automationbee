@@ -25,29 +25,18 @@ public class SearchSpider {
 	
 
 	public boolean findTarget(int target) {
-//		System.out.println("target: " + target);
 		target = target - dictionaryConstant;
-		int allVariablesCount = scorecardGroups.stream().mapToInt(group -> group.getValues().size()).sum();
 		int allGroupsCount = scorecardGroups.stream().mapToInt(group -> 1).sum();
-		int stepCounter = 0;
-		
-//		System.out.println("target: " + target);
 		
 		while (true) {
-			stepCounter++;
-			
 			if (getCurrentScore() == target) {
 				return true;
 			}
 			
-//			System.out.println(getCurrentScore());
-//			setBiggestSuitable(target);
-//			System.out.println(getCurrentScore());
-			
 			setBiggestSuitable(target);
 			
 			
-			if (stepCounter == allVariablesCount * allGroupsCount) {
+			if (failHistory.size() == allGroupsCount) {
 				System.out.println(history);
 				System.out.println(failHistory);
 				return false;
@@ -131,18 +120,13 @@ public class SearchSpider {
 		Collections.sort(suitables, Comparator.comparing(ActionUnit::getStep));
 		
 		if (history.size() == 0 && failHistory.size() != 0) {
-//			System.out.println(suitables);
 			int difference = suitables.size() - failHistory.size();
 			for (int i = 0; i < difference; i++) {
 				suitables.remove(suitables.size() - 1);
 			}
-//			System.out.println(suitables);
-//			System.out.println("/////////////////////////////");
 		} 
 		
 		setActive(suitables.get(suitables.size() - 1));
-		
-		//System.out.println(suitables);
 	}
 	
 	private void setActive(ActionUnit unit) {
