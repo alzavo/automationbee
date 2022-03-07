@@ -3,12 +3,11 @@ package com.ipfdigital.bee.automation.test.search;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Stack;
 
 import com.ipfdigital.bee.automation.test.global.generator.Scorecard;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardGroup;
-import com.ipfdigital.bee.automation.test.global.generator.ScorecardVariable;
 import com.ipfdigital.bee.automation.test.mx.engine.Field;
 import com.ipfdigital.bee.automation.test.global.generator.ScorecardDictionary;
 
@@ -24,22 +23,19 @@ public class SearchSpider {
 	}
 	
 
-	public boolean findTarget(int target) {
+	public Scorecard findTarget(int target) {
 		target = target - dictionaryConstant;
 		int allGroupsCount = scorecardGroups.stream().mapToInt(group -> 1).sum();
 		
 		while (true) {
 			if (getCurrentScore() == target) {
-				return true;
+				return new Scorecard(scorecardGroups, dictionaryConstant);
 			}
 			
 			setBiggestSuitable(target);
 			
-			
 			if (failHistory.size() == allGroupsCount) {
-				System.out.println(history);
-				System.out.println(failHistory);
-				return false;
+				throw new NoSuchElementException("Fail to find target.");
 			}
 		}
 	}
@@ -50,38 +46,20 @@ public class SearchSpider {
 		
 		for (ScorecardGroup scorecardGroup : scorecardGroups) {
 			for (int i = scorecardGroup.getSize() - 1; i > -1; i--) {
-				ScorecardVariable variable = scorecardGroup.getValues().get(i);
-				int activeScore = scorecardGroup.getActive().getScore();
-				int currentScore = variable.getScore();
-				int step = currentScore - activeScore;
+				int step = scorecardGroup.getValues().get(i).getScore() - scorecardGroup.getActive().getScore();
+				boolean canAddVariable = false;
 				
-				// both negative
-				if (getCurrentScore() < 0 && target < 0) {
-					if (step <= Math.abs(Math.abs(target) - Math.abs(getCurrentScore()))) {
-						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
-						break;
-					}
+				if (getCurrentScore() < 0 && target < 0 && step <= Math.abs(Math.abs(target) - Math.abs(getCurrentScore()))) { 
+					canAddVariable = true;
+				} else if (getCurrentScore() <= 0 && target >= 0 && step <= target + Math.abs(getCurrentScore())) {
+					canAddVariable = true;
+				} else if (getCurrentScore() > 0 && target > 0 && step <= target - getCurrentScore()) {
+					canAddVariable = true;
 				}
 				
-				// current negative, target positive
-				if (getCurrentScore() <= 0 && target >= 0) {
-					if (step <= target + Math.abs(getCurrentScore())) {
-						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
-						break;
-					}
-				}
-			
-				// current positive, target negative
-				if (getCurrentScore() > 0 && target < 0) {
-					throw new IllegalStateException();
-				}
-				
-				// both positive
-				if (getCurrentScore() > 0 && target > 0) {
-					if (step <= target - getCurrentScore()) {
-						suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
-						break;
-					}
+				if (canAddVariable) {
+					suitables.add(new ActionUnit(scorecardGroup.getName(), scorecardGroup.getActiveIndex(), i, step));
+					break;
 				}
 				
 			}
@@ -90,46 +68,67 @@ public class SearchSpider {
 		if (suitables.stream().mapToInt(ActionUnit::getStep).sum() == 0) {
 			ActionUnit historyStart = history.get(0);
 			
-			// clear all
-			history.clear();
-			for (ScorecardGroup scorecardGroup : scorecardGroups) {
-				scorecardGroup.setActive(0);
-			}
+			clearAllData();
 			
-			// entire group variables fails
-			if (historyStart.getBecomeIndex() == 0) {
-				failHistory.add(historyStart.getGroupName());
+			if (checkIfGroupFails(historyStart)) {
 				return;
 			}
 			
-			scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().setActive(historyStart.getWasIndex());
-			Integer wasScore = scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().getScore();
+			setActiveInGroup(changeHistoryStart(historyStart));
 			
-			scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().setActive(historyStart.getBecomeIndex() - 1);
-			Integer becomeScore = scorecardGroups.stream().filter(x -> x.getName().equals(historyStart.getGroupName())).findFirst().get().getScore();
+		} else {
+			Collections.sort(suitables, Comparator.comparing(ActionUnit::getStep));
 			
-			historyStart.setStep(becomeScore - wasScore);
-			historyStart.setBecomeIndex(historyStart.getBecomeIndex() - 1);
+			removeWaste(suitables);
 			
-			suitables.clear();
-			suitables.add(historyStart);
-			history.add(historyStart);
+			setActiveInGroup(suitables.get(suitables.size() - 1));
 		}
-		
-		
-		Collections.sort(suitables, Comparator.comparing(ActionUnit::getStep));
-		
+	}
+	
+	private void removeWaste(ArrayList<ActionUnit> suitables) {
 		if (history.size() == 0 && failHistory.size() != 0) {
 			int difference = suitables.size() - failHistory.size();
 			for (int i = 0; i < difference; i++) {
 				suitables.remove(suitables.size() - 1);
 			}
 		} 
-		
-		setActive(suitables.get(suitables.size() - 1));
 	}
 	
-	private void setActive(ActionUnit unit) {
+	private boolean checkIfGroupFails(ActionUnit historyStart) {
+		if (historyStart.getBecomeIndex() == 0) {
+			failHistory.add(historyStart.getGroupName());
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	private void clearAllData() {
+		history.clear();
+		for (ScorecardGroup scorecardGroup : scorecardGroups) {
+			scorecardGroup.setActive(0);
+		}
+	}
+	
+	private ActionUnit changeHistoryStart(ActionUnit historyStart) {
+		ScorecardGroup startingGroup = scorecardGroups.stream()
+				.filter(x -> x.getName().equals(historyStart.getGroupName()))
+				.findFirst()
+				.get();
+		
+		startingGroup.setActive(historyStart.getWasIndex());
+		Integer wasScore = startingGroup.getScore();
+		
+		historyStart.setBecomeIndex(historyStart.getBecomeIndex() - 1);
+		startingGroup.setActive(historyStart.getBecomeIndex());
+		Integer becomeScore = startingGroup.getScore();
+		
+		historyStart.setStep(becomeScore - wasScore);
+		
+		return historyStart;
+	}
+	
+	private void setActiveInGroup(ActionUnit unit) {
 		for (ScorecardGroup scorecardGroup : scorecardGroups) {
 			if (scorecardGroup.getName().equals(unit.getGroupName())) {
 				scorecardGroup.setActive(unit.getBecomeIndex());

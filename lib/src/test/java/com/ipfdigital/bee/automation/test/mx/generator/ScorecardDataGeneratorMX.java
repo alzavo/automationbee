@@ -39,7 +39,7 @@ public class ScorecardDataGeneratorMX implements ScorecardDataGenerator {
         
         System.out.println("targetScore: " + score);
         
-        return getScorecardByScore(score).getScorecardData();
+        return getScorecardByScore(score).getData();
     }
 
     private Scorecard getScorecardByScore(int score) {
@@ -49,9 +49,9 @@ public class ScorecardDataGeneratorMX implements ScorecardDataGenerator {
         
         SearchSpider searchSpider = new SearchSpider(scorecardDictionary); 
         try {
-        	//return searchSpider.findTarget(normalizeInputScore(score));
-        	return null;
+        	return searchSpider.findTarget(normalizeInputScore(score));
 		} catch (NoSuchElementException e) {
+			// handle exception
 			throw new NoSuchElementException();
 		}
 
