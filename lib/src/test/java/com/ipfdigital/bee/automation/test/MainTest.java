@@ -10,9 +10,32 @@ import org.junit.jupiter.api.Timeout;
 import com.ipfdigital.bee.automation.test.global.generator.Scorecard;
 import com.ipfdigital.bee.automation.test.mx.generator.AppScorecardDictionaryMX;
 import com.ipfdigital.bee.automation.test.mx.generator.BehScorecardDictionaryMX;
+import com.ipfdigital.bee.automation.test.mx.generator.ScorecardDataGeneratorMX;
 import com.ipfdigital.bee.automation.test.search.SearchSpider;
 
 public class MainTest {
+	
+	@Test
+	void appDataGenerator() {
+		ScorecardDataGeneratorMX generator = new ScorecardDataGeneratorMX(new AppScorecardDictionaryMX());
+		try {
+			System.out.println(generator.getScorecardDataByScore());
+		} catch (NoSuchElementException e) {
+			System.out.println("NOT FOUND!");
+		}
+	}
+	
+	@Test
+	void behDataGenerator() {
+		ScorecardDataGeneratorMX generator = new ScorecardDataGeneratorMX(new BehScorecardDictionaryMX());
+		try {
+			System.out.println(generator.getScorecardDataByScore());
+		} catch (NoSuchElementException e) {
+			System.out.println("NOT FOUND!");
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@RepeatedTest(10)
 	@Timeout(value = 10, unit = TimeUnit.MILLISECONDS)
@@ -25,7 +48,7 @@ public class MainTest {
 		} catch (NoSuchElementException e) {
 			System.out.println("NOT FOUND: " + score);
 		}
-	}
+	} 
 	
 	@Test
 	@Timeout(value = 1, unit = TimeUnit.SECONDS)
@@ -40,6 +63,8 @@ public class MainTest {
 			}
 		}
 	}
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@RepeatedTest(10)
 	@Timeout(value = 10, unit = TimeUnit.MILLISECONDS)

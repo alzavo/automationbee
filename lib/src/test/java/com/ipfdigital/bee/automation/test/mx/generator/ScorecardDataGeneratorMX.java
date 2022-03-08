@@ -49,7 +49,9 @@ public class ScorecardDataGeneratorMX implements ScorecardDataGenerator {
         
         SearchSpider searchSpider = new SearchSpider(scorecardDictionary); 
         try {
-        	return searchSpider.findTarget(normalizeInputScore(score));
+        	Scorecard result = searchSpider.findTarget(normalizeInputScore(score));
+        	System.out.println("result: " + result);
+        	return result;
 		} catch (NoSuchElementException e) {
 			// handle exception
 			throw new NoSuchElementException();

@@ -2,7 +2,6 @@ package com.ipfdigital.bee.automation.test.global.generator;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.ipfdigital.bee.automation.test.mx.engine.Field;
